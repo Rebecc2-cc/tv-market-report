@@ -1,5 +1,6 @@
 *.json
 *.py
+!gen_v3.py
 *.md
 *.xlsx
 *.bak
