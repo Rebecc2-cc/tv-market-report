@@ -2278,6 +2278,7 @@ function f5Draw() {
   let rows = list.slice();
   cols.filter(c=>c.flt).forEach(c => {
     const se = F5.filter[c.k];
+    if (c.k==='score' && se && se.size===3) return;   // 配置档三档全选=不过滤 → 保留配置待补(f5NoScore)型号，避免对标表空档
     if (se && se.size) rows = rows.filter(m => se.has(f5Fval(c.k, m)));
   });
   if (F5.sort) {
@@ -2414,6 +2415,7 @@ function buildFig5() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') f5CloseDD(); });
 }
 buildFig5();
+(function(){var b=document.getElementById('toTop');if(!b)return;var t=function(){b.style.display=(window.scrollY>600)?'flex':'none';};window.addEventListener('scroll',t,{passive:true});t();b.onclick=function(){window.scrollTo({top:0,behavior:'smooth'});};})();
 """
 
 # ============ HTML ============
@@ -2620,6 +2622,7 @@ def build_html():
 </div>
 
 <script>window.__DATA__ = {payload};</script>
+<button id="toTop" title="回到顶部" style="position:fixed;right:22px;bottom:88px;width:46px;height:46px;border-radius:50%;border:1px solid #d8dde5;background:#fff;color:#1f2328;font-size:22px;line-height:1;box-shadow:0 4px 14px rgba(15,23,42,.18);cursor:pointer;z-index:9000;padding:0;display:flex;align-items:center;justify-content:center;">↑</button>
 <script>{JS}</script>
 </body>
 </html>"""
