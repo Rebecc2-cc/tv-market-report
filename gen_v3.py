@@ -942,13 +942,24 @@ function strongTech(t) {
 }
 /* 图5「技术」列：普通液晶类（LCD/LED/普通液晶/直下式）统一显示「LED」且不高亮；
    进阶技术（MiniLED 系/QLED/OLED/量子点）写紧凑原名并高亮；空值标「待补」 */
+/* 屏幕技术统一名：OLED / RGB-Mini LED / SQD-Mini LED / BGB-Mini LED / QD-Mini LED / Mini LED / QLED / LED */
+function f5TechNorm(t) {
+  const s = String(t || '').trim();
+  if (!s) return '';
+  if (s.includes('OLED')) return 'OLED';
+  if (s.includes('RGB-Mini') || s.includes('RGB Mini')) return 'RGB-Mini LED';
+  if (s.includes('SQD')) return 'SQD-Mini LED';
+  if (s.includes('BGB-Mini') || s.includes('BGB Mini')) return 'BGB-Mini LED';
+  if (s.includes('QD-Mini')) return 'QD-Mini LED';
+  if (s.includes('Mini')) return 'Mini LED';
+  if (s.includes('QLED') || s.includes('量子点')) return 'QLED';
+  return 'LED'; // LCD / LED / 普通液晶 / 直下式
+}
 function f5Tech(m) {
-  const t = (m && m.tech) ? String(m.tech).trim() : '';
-  if (!t) return '<span class="na">待补</span>';
-  const plain = { 'LCD':1, 'LED':1, '普通液晶':1, 'LED(直下式)':1 };
-  if (plain[t]) return 'LED';
-  if (t === '普通液晶(量子点)') return '<b class="up" title="屏幕技术：QD-MiniLED">QD-MiniLED</b>';
-  return `<b class="up" title="屏幕技术：${t}">${t.replace(/\s+/g,'')}</b>`;
+  const n = f5TechNorm(m && m.tech ? String(m.tech).trim() : '');
+  if (!n) return '<span class="na">待补</span>';
+  if (n === 'LED') return 'LED';
+  return `<b class="up" title="屏幕技术：${n}">${n}</b>`;
 }
 /* 原生刷新率：统一加 Hz 单位 */
 function f5Hz(v) {
@@ -1525,11 +1536,8 @@ function exportCsv() {
 
 /* ===== 图5 对标表：下载竞争地图选中型号参数 CSV ===== */
 function f5TechPlain(m) {
-  const t = m && m.tech ? String(m.tech).trim() : '';
-  if (!t) return '待补';
-  if ({'LCD':1,'LED':1,'普通液晶':1,'LED(直下式)':1}[t]) return 'LED';
-  if (t === '普通液晶(量子点)') return 'QD-MiniLED';
-  return t.replace(/\s+/g, '');
+  const n = f5TechNorm(m && m.tech ? String(m.tech).trim() : '');
+  return n || '待补';
 }
 function f5MemPlain(mem) {
   if (!mem) return '待补';
@@ -2039,19 +2047,12 @@ function f5RelCfg(m, cfg) {
 function partLabel(p) { return ({'2000级':'两千级','3000级+':'三千级+'})[p] || p; }
 // 图5 配置评分（技术35 / 分区25 / 刷新10 / 内存10 / 抗反射10 / 音响10 = 100）=====
 const _AUD_BR = ['安桥','帝瓦雷','哈曼','JBL','B&W','Bose','雅马哈','索尼'];
-function f5TechScore(t){ const s=String(t||''); if(!s) return 0;
-  if(s.includes('OLED')) return 35;
-  if(s.includes('RGB-Mini')||s.includes('RGB Mini')) return 30;
-  if(s.includes('SQD')) return 26;
-  if(s.includes('QD-Mini')) return 23;
-  if(s.includes('Mini')) return 19;
-  if(s.includes('QLED')||s.includes('量子点')) return 16;
-  return 12; // LED 系（含 LCD / 普通液晶 / 直下式）
-}
+function f5TechScore(t){ const n=f5TechNorm(t); if(!n) return 0;
+  return {'OLED':35,'RGB-Mini LED':30,'SQD-Mini LED':28,'BGB-Mini LED':20,'QD-Mini LED':18,'Mini LED':15,'QLED':5,'LED':0}[n] ?? 0; }
 function f5PartScore(p){ if(p==null||String(p).includes('无')) return 0;
   return {'几十区':7,'百级':13,'几百':15,'千级':17,'百千级':19,'2000级':21,'3000级':22,'3000级+':25}[String(p)]||0;
 }
-function f5HzScore(h){ if(!h) return 0; return h>=150?10:(h>=120?8:6); }   // 150以上=10，120-144=8，60=6
+function f5HzScore(h){ if(!h) return 0; if(h>=180) return 10; if(h>=170) return 9; if(h>=165) return 8; if(h>=150) return 7; if(h>=132) return 6; if(h>=120) return 4; return 0; }   // 60Hz=0 / 120=4 / 132-144=6 / 150=7 / 165=8 / 170=9 / 180=10
 function f5MemScore(m){
   const s = String(m.mem||'').trim();
   const g = s.match(/(?:^|\D)(\d+(?:\.\d+)?)\s*\+\s*(\d+)/);
@@ -2637,9 +2638,9 @@ def build_html():
       <div class="f5score">
         <b>配置评分规则</b>（总分100 = 屏幕技术35 + 分区25 + 刷新率10 + 内存10 + 抗反射10 + 音响10）
         <div>
-          <span>技术35：OLED 35 / RGB-MiniLED 30 / SQD-Mini 26 / QD-Mini 23 / MiniLED 19 / QLED·量子点 16 / LED 12</span>
+          <span>技术35：OLED 35 / RGB-Mini LED 30 / SQD-Mini LED 28 / BGB-Mini LED 20 / QD-Mini LED 18 / Mini LED 15 / QLED 5 / LED 0</span>
           <span>分区25：无0 → 几十7 → 百级13 → 几百15 → 千级17 → 百千级19 → 两千级21 → 三千级22 → 3000级+ 25</span>
-          <span>刷新率10：60Hz 6 / 120–144Hz 8 / 150Hz+ 10</span>
+          <span>刷新率10：60Hz 0 / 120Hz 4 / 132–144Hz 6 / 150Hz 7 / 165Hz 8 / 170Hz 9 / 180Hz 10</span>
           <span>内存10：RAM≤2GB 起6 / 3GB 起7 / 4GB+ 起8 ＋ ROM≤32GB +0 / 64GB +1 / 128GB +2（封顶10）</span>
           <span>抗反射10：无0 / AG 4 / LR+AG 8 / LR 10</span>
           <span>音响10：2.0声道0 / 2.1=4 / 2.1.2=6 / 更高=8 / 更高且名品(安桥·帝瓦雷·哈曼…)10</span>
