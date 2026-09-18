@@ -136,6 +136,36 @@ for m in models:
         "first_week": (_gd or {}).get("first_week"),
     }
 
+# ==== 新品保护期：曾达标新品持久化 + 每款 nguard（绿点） ====
+# 规则：达标新品(新品期内过 newGate 门槛) 摘标后仍保护 +16周（首现后满20周失效）。
+# 保护期内豁免：清库、近8周全0、各图门槛；期间以绿点"新品保护期"标识（新品期仍显示「新品」chip）。
+_WE_N = META['week_end']
+_E = 202600 + _WE_N
+_S4 = _E - 3
+_GS = _E - 19                        # 首现后20周内皆保护（4周新+16周拓展）
+def _n4(w): return sum((w or [])[-4:])
+_flagd = False
+for m in models:
+    _fn = (m.get('gro') or {}).get('first_num')
+    if _fn is not None and _S4 <= _fn <= _E:       # 当期新品窗口
+        _z = m.get('size', 0)
+        if _n4((m.get('gro') or {}).get('w8')) > (10 if _z >= 93 else 50):
+            if not m.get('new_qualified'):
+                m['new_qualified'] = True; _flagd = True
+if _flagd:                                          # 持久化曾达标标记到源
+    _src = json.load(open(SRC, encoding='utf-8'))
+    _slist = _src if isinstance(_src, list) else _src.get('models', [])
+    _kmap = {}
+    for _x in _slist: _kmap['%s||%s' % (_x.get('brand'), _x.get('model'))] = _x
+    for m in models:
+        if m.get('new_qualified'):
+            _k = '%s||%s' % (m['brand'], m['model'])
+            if _k in _kmap: _kmap[_k]['new_qualified'] = True
+    json.dump(_src, open(SRC, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+for m in models:
+    _fn = (m.get('gro') or {}).get('first_num')
+    m['nguard'] = bool(m.get('new_qualified')) and _fn is not None and _GS <= _fn <= _E
+
 DATA = {
     "models": models,
     "brands": BRANDS, "color": COLOR,
@@ -558,6 +588,7 @@ th .f5fbtn.act{background:#0E7CE8;color:#fff;border-color:#0E7CE8}
 .badge.ng{background:#10b981;color:#fff;font-weight:600}
 .ngchip{display:inline-block;background:#10b981;color:#fff;border-radius:9px;font-size:9px;font-weight:700;padding:1px 6px;vertical-align:1px;margin-left:3px}
 .m-ng{background:#d1fae5;color:#047857;font-weight:700;font-size:9px;padding:0 4px;border-radius:6px;margin-right:3px}
+.gdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;vertical-align:1px;margin:0 3px;box-shadow:0 0 0 1px rgba(255,255,255,.7);cursor:help}
 /* 新品上市板块 */
 .newsec{border:2px solid #10b981;border-radius:12px;background:#f0fdf4;padding:16px 20px;margin-bottom:16px}
 .newsec .hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
@@ -664,6 +695,14 @@ function newGate(m){ const s=m.size||0; if(s>=93) return new4w(m)>10; return new
 function newActive(m){ return new4w(m)>0; }
 /* 是否按"新品口径"放入该图（图1-4 通用）：新品 hit 后不再要求旧门槛；旧门槛仍由 pass/meta gate 控制 */
 function newEligible(m){ return isNew(m); }
+/* 新品保护期（读自 Python 侧持久化的曾达标标记）：= 曾达标新品且首现后20周内 */
+function f5Guard(m){ return !!m.nguard; }
+/* 绿点：保护期内、且已摘「新品」标（到期16周拓展段）才显示绿点；新品期仍显示绿色 chip */
+function f5Dot(m){ return f5Guard(m) && !isNew(m); }
+/* 绿点 HTML：保护期内且已摘「新品」标时，在型号右上角打绿色圆点；新品期仍显示绿色「新品」chip */
+function gDot(m){ return f5Dot(m) ? '<i class="gdot" title="新品保护期：豁免清库与近8周全0，首现后20周内"></i>' : ''; }
+/* 清库 / 近8周全0 豁免：新品 + 保护期全部豁免 */
+function protEx(m){ return isNew(m) || f5Guard(m); }
 
 /* 去掉型号开头的尺寸前缀：75A4H→A4H；SKS30→SKS30（无尺寸前缀保留） */
 const _SZ_PREFIX = new Set(['32','40','43','50','55','60','65','70','75','77','85','88','98','100','110','120','163']);
@@ -750,7 +789,7 @@ function fillNewSec() {
    小尺寸(≤50吋)：合计<500 或 连续≥4周<50；豁免 32吋 均价>1500、40/43吋 均价>2000、50吋 均价>2500（豁免需近8周有动销） */
 function isClear9(m){
   const w=(m.gro||{}).w8||[]; if(!w.length) return null;
-  if(isNew(m)) return null;   // 新品豁免清库打标（近4周刚上市，不适用低销量清库判定）
+  if(protEx(m)) return null;   // 新品+保护期豁免清库打标
   const sz = m.size||0;
   const sum = w.reduce((a,b)=>a+(b||0),0);
   let T, ex=false;
@@ -786,7 +825,7 @@ function isClear9(m){
 /* 单一图：全局筛选 + 该图独立品牌集合 */
 function figList(fig) {
   const bs = S.b[fig];
-  return M.filter(m => bs.has(m.brand) && pass(m) && !zeroSales9(m) && isClearShow(fig,m));
+  return M.filter(m => bs.has(m.brand) && pass(m) && (!zeroSales9(m) || protEx(m)) && isClearShow(fig,m));
 }
 
 /* 「移除清库机」过滤器：fig 图开启(S.clr[fig]===1)时，清库型号(m)被排除；未开启则全保留 */
@@ -830,8 +869,8 @@ function buildClearCtl(fig, hostId) {
 function seriesRows(list) {
   const g = new Map();
   for (const m of list) {
-    // 新品豁免原门槛：只要满足新品门槛(newGate)和尺寸有归属列(col!=null)就可以入池
-    if (!m.fig1_ok && !(isNew(m) && newGate(m) && m.fig1_col!=null)) continue;
+    // 新品豁免原门槛：只要满足新品门槛(newGate)和尺寸有归属列(col!=null)就可以入池；保护期(摘标后)同样豁免
+    if (!m.fig1_ok && !(isNew(m) && newGate(m) && m.fig1_col!=null) && !f5Guard(m)) continue;
     const k = m.brand + '||' + m.series;
     if (!g.has(k)) g.set(k, {brand:m.brand, series:m.series, vol:0, n:0, cells:new Map()});
     const r = g.get(k);
@@ -1012,7 +1051,7 @@ function chip(m, showAnti) {
   return `<div class="mc${memNa} ${S.sel.includes(m.id)?'sel':''}" data-id="${m.id}" title="${hover.replace(/"/g,'&quot;')}">
     <div class="mbar" style="background:${c}"></div>
     <div class="mbody" style="background:${mbg}">
-      <div class="mtop"><span class="md" style="background:${c}"></span><span class="mnm">${main}</span>${techBadge}${clearBadge}${newBadge}</div>
+      <div class="mtop"><span class="md" style="background:${c}"></span><span class="mnm">${main}</span>${gDot(m)}${techBadge}${clearBadge}${newBadge}</div>
       <div class="mbot"><span>${m.size}吋</span><span>${fmt(m.cum_vol)}台</span>${sv}</div>
     </div></div>`;
 }
@@ -1129,7 +1168,7 @@ function renderFig1(list) {
           const clT = cl1 ? '清库:'+cl1.reason+(cl1.ex?'（高价位例外，阈值'+cl1.T+'台）':'') : '';
           const clB = cl1 ? `<i class="m-clr" title="${clT.replace(/"/g,'&quot;')}">清库</i>` : '';
           const ngB = isNew(m) ? '<i class="m-ng">新</i>' : '';
-          return `<div class="m-row" title="${m.brand} ${m.model} ${m.size}吋｜累计 ${fmt(m.cum_vol)} 台｜均价 ¥${m.avg_price.toLocaleString()}${hoverParams(m)?'\n\n'+hoverParams(m):''}" data-id="${m.id}"><span class="m-name">${shortName(m)}</span>${ngB}${clB}<span class="m-vol">${fmt(m.cum_vol)}</span></div>`;
+          return `<div class="m-row" title="${m.brand} ${m.model} ${m.size}吋｜累计 ${fmt(m.cum_vol)} 台｜均价 ¥${m.avg_price.toLocaleString()}${hoverParams(m)?'\n\n'+hoverParams(m):''}" data-id="${m.id}"><span class="m-name">${shortName(m)}</span>${gDot(m)}${ngB}${clB}<span class="m-vol">${fmt(m.cum_vol)}</span></div>`;
         }).join('')}
         ${more}</div></div></td>`;
     }
@@ -1152,7 +1191,7 @@ const FIG2_COLS = ['50吋及以下', '55吋', '65吋', '75吋', '85吋', '98吋+
 function renderFig2(list) {
   const g = new Map();
   for (const m of list) {
-    if (!m.fig1_ok && !(isNew(m) && newGate(m) && m.fig1_col!=null)) continue;   // 图2 跟随图1，新品豁免门槛
+    if (!m.fig1_ok && !(isNew(m) && newGate(m) && m.fig1_col!=null) && !f5Guard(m)) continue;   // 图2 跟随图1，新品与保护期豁免门槛
     const b = beltOf(m), s = fig2ColOf(m);
     if (!g.has(b)) g.set(b, new Map());
     if (!g.get(b).has(s)) g.get(b).set(s, {n:0,v:0,arr:[]});
@@ -1822,7 +1861,7 @@ const F5PR_OF = m => {
 const F5_GT = m => { const s = m.size||0, v20 = m.vol20||0; return s >= 98 ? (v20 > 200) : (v20 > 1000); };
 // 近8周0销量排除（持续生效）：近8周 w8 (26W30-37) 全部为 0 的型号从图5移除（新品豁免，改用近4周在售判断）
 const f5ZeroSales = m => { const w=(m.gro||{}).w8||[]; return w.length && w.every(v=>!v); };
-const F5POOL = M.filter(m => (m.size||0) > 50 && (F5_GT(m) || (isNew(m)&&newGate(m))) && F5PR_OF(m) && (!f5ZeroSales(m) || (isNew(m)&&newActive(m))));   // 图5 型号池：均价无法归档或近8周0销量不入池；新品豁免门槛与0销量
+const F5POOL = M.filter(m => (m.size||0) > 50 && (F5_GT(m) || (isNew(m)&&newGate(m)) || f5Guard(m)) && F5PR_OF(m) && (!f5ZeroSales(m) || (isNew(m)&&newActive(m)) || f5Guard(m)));   // 图5 型号池：均价无法归档或近8周0销量不入池；新品与保护期豁免门槛与0销量
 const F5 = {
   b: new Set(D.brands),                 // 图5 独立品牌筛选
   sz: null,                             // 目标产品尺寸档（展示用，多规格时置 ''）
@@ -2076,12 +2115,14 @@ function f5MemScore(m){
   const g = s.match(/(?:^|\D)(\d+(?:\.\d+)?)\s*\+\s*(\d+)/);
   if (g) {
     const ram = parseFloat(g[1]), rom = +g[2];
-    const base = ram < 3 ? 6 : (ram < 4 ? 7 : 8);  // ≤2GB=6 / 3GB=7 / 4GB+=8
-    const add = rom >= 128 ? 2 : (rom >= 64 ? 1 : 0);
-    return Math.min(10, base + add);               // 存储参与：2+32=6 / 2+64=7 / 4+128=10
+    // RAM：1=0 / 1.5=2 / 2=4 / 3=5 / ≥4=6
+    const rb = ram >= 4 ? 6 : (ram >= 3 ? 5 : (ram >= 2 ? 4 : (ram >= 1.5 ? 2 : 0)));
+    // ROM：8=0 / 16=1 / 32=2 / 64=3 / ≥128=4
+    const add = rom >= 128 ? 4 : (rom >= 64 ? 3 : (rom >= 32 ? 2 : (rom >= 16 ? 1 : 0)));
+    return Math.min(10, rb + add);                 // 1+8=0 / 2+32=6 / 3+64=8 / 4+128=10
   }
   const b = String(m.mem_band || '');
-  if (b === '≤2GB') return 6; if (b === '3GB') return 7; if (b === '4GB+') return 8;
+  if (b === '≤2GB') return 4; if (b === '3GB') return 5; if (b === '4GB+') return 6; // 兜底：取各档代表值
   return 0;
 }
 function f5AntiScore(a){ const s=String(a||''); if(!s||s.includes('无')) return 0;
@@ -2252,7 +2293,7 @@ function f5Excp(m){ const s=m.size||0, p=m.avg_price||0; const z=F5SZ_OF(m);
 // 清库判定（近8周 w8=26W30-37）：合计 <阈值 或 连续≥4周单周 <阈值；例外档阈值10，普通100
 function f5Clear(m){
   const w=(m.gro||{}).w8||[]; if(!w.length) return null;
-  if(isNew(m)) return null;   // 新品豁免清库打标
+  if(protEx(m)) return null;   // 新品+保护期豁免清库打标
   const z = F5SZ_OF(m);
   const ex = f5Excp(m);
   const sum = w.reduce((a,b)=>a+(b||0),0);
@@ -2405,7 +2446,7 @@ function f5Draw() {
       if (c2.k==='audio') return `<td>${m.audio||'<span class="na">待补</span>'}</td>`;
       if (c2.k==='model') {
         const tip = m.product_name ? String(m.model).replace(/"/g,'&quot;') : '';
-        return `<td class="f5anchor" title="${tip}">${shortName(m)}${isNew(m)?'<span class="ngchip">新品</span>':''}</td>`;
+        return `<td class="f5anchor" title="${tip}">${shortName(m)}${gDot(m)}${isNew(m)?'<span class="ngchip">新品</span>':''}</td>`;
       }
       return `<td>${m[c2.k]==null?'<span class="na">待补</span>':m[c2.k]}</td>`;
     }).join('')}</tr>`;
@@ -2659,7 +2700,7 @@ def build_html():
           <span>技术35：OLED 35 / RGB-Mini LED 30 / SQD-Mini LED 28 / BGB-Mini LED 20 / QD-Mini LED 18 / Mini LED 15 / QLED 5 / LED 0</span>
           <span>分区25：无0 → 1-99 3 → 100-199 5 → 200-399 7 → 400-699 10 → 700-999 12 → 1000-1499 16 → 1500-1999 18 → 2000-2999 19 → 3000-3999 20 → 4000-7999 22 → 8000+ 25</span>
           <span>刷新率10：60Hz 0 / 120Hz 4 / 132–144Hz 6 / 150Hz 7 / 165Hz 8 / 170Hz 9 / 180Hz 10</span>
-          <span>内存10：RAM≤2GB 起6 / 3GB 起7 / 4GB+ 起8 ＋ ROM≤32GB +0 / 64GB +1 / 128GB +2（封顶10）</span>
+          <span>内存10：RAM 1=0 / 1.5=2 / 2=4 / 3=5 / ≥4=6 ＋ ROM 8=0 / 16=1 / 32=2 / 64=3 / ≥128=4（1+8=0…4+128=10）</span>
           <span>抗反射10：无0 / AG 4 / LR+AG 8 / LR 10</span>
           <span>音响10：2.0声道0 / 2.1=4 / 2.1.2=6 / 更高=8 / 更高且名品(安桥·帝瓦雷·哈曼…)10</span>
           <span>档位口径＝该格子内配置分经 K-Means 聚 3 簇，按最接近簇判定高配/标配/低价</span>
