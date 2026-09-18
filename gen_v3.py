@@ -64,12 +64,12 @@ TECH_LABEL = {
     "LCD": "液晶", "普通液晶": "液晶",
     "LED": "LED", "LED(直下式)": "LED",
     "Mini LED": "MiniLED", "QD-Mini LED": "QD-Mini", "SQD-Mini LED": "SQD-Mini",
-    "RGB-Mini LED": "RGB-Mini", "G+Mini LED": "G-Mini",
+    "RGB-Mini LED": "RGB-Mini", "G+Mini LED": "G-Mini", "BGB-Mini LED": "BGB-Mini",
     "QLED": "QLED", "QD-LED": "QD-LED", "OLED": "OLED",
     "普通液晶(量子点)": "量子点", "LASER": "激光",
 }
 TECH_STRONG = [
-    "Mini LED", "QD-Mini LED", "SQD-Mini LED", "RGB-Mini LED", "G+Mini LED",
+    "Mini LED", "QD-Mini LED", "SQD-Mini LED", "RGB-Mini LED", "G+Mini LED", "BGB-Mini LED",
     "QLED", "QD-LED", "OLED", "普通液晶(量子点)", "LASER",
 ]
 
