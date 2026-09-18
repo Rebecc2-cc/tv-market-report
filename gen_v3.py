@@ -2049,8 +2049,26 @@ function partLabel(p) { return ({'2000级':'两千级','3000级+':'三千级+'})
 const _AUD_BR = ['安桥','帝瓦雷','哈曼','JBL','B&W','Bose','雅马哈','索尼'];
 function f5TechScore(t){ const n=f5TechNorm(t); if(!n) return 0;
   return {'OLED':35,'RGB-Mini LED':30,'SQD-Mini LED':28,'BGB-Mini LED':20,'QD-Mini LED':18,'Mini LED':15,'QLED':5,'LED':0}[n] ?? 0; }
-function f5PartScore(p){ if(p==null||String(p).includes('无')) return 0;
-  return {'几十区':7,'百级':13,'几百':15,'千级':17,'百千级':19,'2000级':21,'3000级':22,'3000级+':25}[String(p)]||0;
+function parsePart(v){ if(v==null) return null; const n=Number(String(v).trim()); return isNaN(n)?null:n; }
+function f5PartScore(m){
+  const raw = parsePart(m && m.part);
+  if (raw != null) {
+    if (raw>=8000) return 25;
+    if (raw>=4000) return 22;
+    if (raw>=3000) return 20;
+    if (raw>=2000) return 19;
+    if (raw>=1500) return 18;
+    if (raw>=1000) return 16;
+    if (raw>=700) return 12;
+    if (raw>=400) return 10;
+    if (raw>=200) return 7;
+    if (raw>=100) return 5;
+    if (raw>=1) return 3;
+    return 0;
+  }
+  const b = String((m && m.part_band) || '');
+  if (b.includes('无')) return 0;
+  return {'几十区':3,'百级':5,'几百':11,'千级':16,'百千级':16,'2000级':19,'3000级+':20,'几千':22}[b]||0;
 }
 function f5HzScore(h){ if(!h) return 0; if(h>=180) return 10; if(h>=170) return 9; if(h>=165) return 8; if(h>=150) return 7; if(h>=132) return 6; if(h>=120) return 4; return 0; }   // 60Hz=0 / 120=4 / 132-144=6 / 150=7 / 165=8 / 170=9 / 180=10
 function f5MemScore(m){
@@ -2084,7 +2102,7 @@ function f5AudioScore(a){ const s=String(a||''); if(!s||s.includes('免')||s.inc
   return famous ? 10 : 8;                 // 2.1.2以上：名品=10，否则8
 }
 function f5Score(m){ return Math.round(
-  f5TechScore(m.tech)+f5PartScore(m.part_band)+f5HzScore(m.refresh_hz)+
+  f5TechScore(m.tech)+f5PartScore(m)+f5HzScore(m.refresh_hz)+
   f5MemScore(m)+f5AntiScore(m.anti)+f5AudioScore(m.audio)); }
 // 格子内按配置分 K-Means 聚 3 簇 → 高配/标配/低价（自然分簇，非均等分位；分簇不明显时按分差就近纳入）
 const F5_SCORE_KEYS = ['tech','part_band','refresh_hz','mem_band','anti','audio'];
@@ -2639,7 +2657,7 @@ def build_html():
         <b>配置评分规则</b>（总分100 = 屏幕技术35 + 分区25 + 刷新率10 + 内存10 + 抗反射10 + 音响10）
         <div>
           <span>技术35：OLED 35 / RGB-Mini LED 30 / SQD-Mini LED 28 / BGB-Mini LED 20 / QD-Mini LED 18 / Mini LED 15 / QLED 5 / LED 0</span>
-          <span>分区25：无0 → 几十7 → 百级13 → 几百15 → 千级17 → 百千级19 → 两千级21 → 三千级22 → 3000级+ 25</span>
+          <span>分区25：无0 → 1-99 3 → 100-199 5 → 200-399 7 → 400-699 10 → 700-999 12 → 1000-1499 16 → 1500-1999 18 → 2000-2999 19 → 3000-3999 20 → 4000-7999 22 → 8000+ 25</span>
           <span>刷新率10：60Hz 0 / 120Hz 4 / 132–144Hz 6 / 150Hz 7 / 165Hz 8 / 170Hz 9 / 180Hz 10</span>
           <span>内存10：RAM≤2GB 起6 / 3GB 起7 / 4GB+ 起8 ＋ ROM≤32GB +0 / 64GB +1 / 128GB +2（封顶10）</span>
           <span>抗反射10：无0 / AG 4 / LR+AG 8 / LR 10</span>
