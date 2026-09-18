@@ -348,6 +348,9 @@ footer{text-align:center;color:#9aa5b4;font-size:11.5px;padding:14px 0 8px;}
 .float-head table.ft th{background:#f7f9fb;}
 .float-head table.ft th:first-child{background:#f7f9fb;box-shadow:3px 0 0 #f7f9fb;}
 .float-head table.ft{margin:0;}
+.float-head table.f5tbl th{background:#f7f9fb;white-space:nowrap;font-size:11.5px;font-weight:600;color:#6b7280;}
+.float-head table.f5tbl th:first-child{box-shadow:3px 0 0 #f7f9fb;}
+.float-head table.f5tbl{margin:0;}
 
 /* ===== 图1 单元格明细（仿参考报告 .m-row / .m-count / .m-vol） ===== */
 .cell.f1{padding:5px 6px;height:auto;min-height:38px;align-items:stretch;justify-content:flex-start;overflow:visible;}
@@ -1028,7 +1031,7 @@ let FHEADS = [];
 function buildFloatHeads() {
   document.querySelectorAll('.float-head').forEach(e => e.remove());
   FHEADS = [];
-  document.querySelectorAll('table.ft').forEach(tb => {
+  document.querySelectorAll('table.ft, table.f5tbl').forEach(tb => {
     if (!tb.tHead) return;
     const wrap = tb.parentElement;
     if (!wrap) return;
@@ -1534,7 +1537,7 @@ function f5MemPlain(mem) {
 }
 function exportF5Csv(list) {
   if (!list.length) { alert('当前选中格子内没有可导出的型号'); return; }
-  const ts = F5._tiers || {hi:Infinity, lo:-Infinity};
+  const ts = F5._tiers || {has:false, kmeans:[]};
   const cols = ['品牌','型号/产品名','尺寸吋','累计销量','均价','配置分','配置档','屏幕技术',`近8周销量(26W30-37)`,'原生刷新率Hz','控光分区','内存','抗反射','音响'];
   const val = (m, k) => {
     const w = ((m.gro||{}).w8||[]).reduce((s,v)=>s+v,0);
@@ -1549,7 +1552,7 @@ function exportF5Csv(list) {
       '屏幕技术': f5TechPlain(m),
       '近8周销量(26W30-37)': w,
       '原生刷新率Hz': m.refresh_hz != null && String(m.refresh_hz).trim()!=='' ? String(m.refresh_hz).replace(/Hz$/i,'') + 'Hz' : '待补',
-      '控光分区': m.part != null && m.part!=='' ? m.part : '待补',
+      '控光分区': m.part != null && m.part!=='' ? m.part : (m.part_band ? (m.part_band==='无分区' ? '无分区' : m.part_band) : '待补'),
       '内存': f5MemPlain(m.mem),
       '抗反射': (m.anti||m.anti_band) || '待补',
       '音响': m.audio || '待补',
@@ -2034,19 +2037,19 @@ function f5RelCfg(m, cfg) {
 }
 // 分区档位显示名：2000级→两千级，3000级+→三千级+（数据仍为英文符号，仅展示改名）
 function partLabel(p) { return ({'2000级':'两千级','3000级+':'三千级+'})[p] || p; }
-// ===== 图5 配置评分（技术40 / 分区20 / 刷新10 / 内存10 / 抗反射10 / 音响10 = 100）=====
+// 图5 配置评分（技术35 / 分区25 / 刷新10 / 内存10 / 抗反射10 / 音响10 = 100）=====
 const _AUD_BR = ['安桥','帝瓦雷','哈曼','JBL','B&W','Bose','雅马哈','索尼'];
 function f5TechScore(t){ const s=String(t||''); if(!s) return 0;
-  if(s.includes('OLED')) return 40;
-  if(s.includes('RGB-Mini')||s.includes('RGB Mini')) return 34;
-  if(s.includes('SQD')) return 30;
-  if(s.includes('QD-Mini')) return 26;
-  if(s.includes('Mini')) return 22;
-  if(s.includes('QLED')||s.includes('量子点')) return 18;
-  return 14; // LED 系（含 LCD / 普通液晶 / 直下式）
+  if(s.includes('OLED')) return 35;
+  if(s.includes('RGB-Mini')||s.includes('RGB Mini')) return 30;
+  if(s.includes('SQD')) return 26;
+  if(s.includes('QD-Mini')) return 23;
+  if(s.includes('Mini')) return 19;
+  if(s.includes('QLED')||s.includes('量子点')) return 16;
+  return 12; // LED 系（含 LCD / 普通液晶 / 直下式）
 }
 function f5PartScore(p){ if(p==null||String(p).includes('无')) return 0;
-  return {'几十区':6,'百级':10,'几百':12,'千级':14,'百千级':16,'2000级':17,'3000级':18,'3000级+':20}[String(p)]||0;
+  return {'几十区':7,'百级':13,'几百':15,'千级':17,'百千级':19,'2000级':21,'3000级':22,'3000级+':25}[String(p)]||0;
 }
 function f5HzScore(h){ if(!h) return 0; return h>=150?10:(h>=120?8:6); }   // 150以上=10，120-144=8，60=6
 function f5MemScore(b){ return {'≤2GB':6,'3GB':8,'4GB+':10}[String(b)]||0; }
@@ -2070,22 +2073,47 @@ function f5AudioScore(a){ const s=String(a||''); if(!s||s.includes('免')||s.inc
 function f5Score(m){ return Math.round(
   f5TechScore(m.tech)+f5PartScore(m.part_band)+f5HzScore(m.refresh_hz)+
   f5MemScore(m.mem_band)+f5AntiScore(m.anti)+f5AudioScore(m.audio)); }
-// 片内三分位 → 高配/标配/低价（选中的格子片区内相队判定）
-// 参数待补（6维配置任意缺失）则视为「暂不可评分」
+// 格子内按配置分 K-Means 聚 3 簇 → 高配/标配/低价（自然分簇，非均等分位；分簇不明显时按分差就近纳入）
 const F5_SCORE_KEYS = ['tech','part_band','refresh_hz','mem_band','anti','audio'];
 function f5ParamMissing(m){ return F5_SCORE_KEYS.some(k => { const v=m[k]; return v==null || String(v).trim()==='' || v==='待补'; }); }
 // 清库 且 参数待补 → 配置档空出、不参与打分分档（补齐参数后再评）
 function f5NoScore(m){ return !!isClear9(m) && f5ParamMissing(m); }
+// 1 维 K-Means 聚 k 簇（分数数组），返回降序排列的分界值
+function f5KMeans(vals,k){
+  const a=[...vals].sort((x,y)=>x-y);
+  if(!a.length) return [];
+  if(a.length<=k) return a;
+  const centers=[];
+  for(let i=0;i<k;i++) centers.push(a[Math.floor(i*(a.length-1)/(k-1))]); // 均匀取初始质心
+  for(let it=0;it<50;it++){
+    const cl=Array.from({length:k},()=>[]);
+    a.forEach(x=>{
+      let bi=0,bd=Infinity;
+      for(let i=0;i<k;i++){ const d=Math.abs(x-centers[i]); if(d<bd){bd=d;bi=i;} }
+      cl[bi].push(x);
+    });
+    const nc=cl.map(g=> g.length? g.reduce((s,v)=>s+v,0)/g.length : centers[cl.indexOf(g)]);
+    const conv=nc.every((c,i)=>Math.abs(c-(centers[i]??0))<0.01);
+    centers.splice(0,k,...nc);
+    if(conv) break;
+  }
+  return centers.sort((x,y)=>x-y);
+}
+// 在当前格子的所有可评分型号里，对配置分做 3 簇，返回三簇质心（升序）
 function f5Tiers(listm){ 
   const base = (listm||[]).filter(m=>!f5NoScore(m));
-  if(!base||base.length<3) return {hi:Infinity,lo:-Infinity};
-  const ss=base.map(m=>f5Score(m)).filter(v=>!isNaN(v)).sort((a,b)=>a-b);
-  return { hi:ss[Math.floor(ss.length*2/3)], lo:ss[Math.floor(ss.length/3)] };
+  if(!base||base.length<3) return {has:false, kmeans:[]};
+  const ss=base.map(m=>f5Score(m)).filter(v=>!isNaN(v));
+  const cs=f5KMeans(ss,3).sort((a,b)=>a-b);
+  if(cs.length!==3) return {has:false, kmeans:[]};
+  return {has:true, kmeans:cs};
 }
-function f5TierOf(sc,ts){ if(sc==null||ts.hi===Infinity) return {label:'待补',cls:''};
-  if(sc>=ts.hi) return {label:'高配',cls:'hi'};
-  if(sc<=ts.lo) return {label:'低价',cls:'lo'};
-  return {label:'标配',cls:'md'};
+function f5TierOf(sc,ts){ if(sc==null||!ts||!ts.has) return {label:'待补',cls:''};
+  const cs=ts.kmeans;
+  // 取离 sc 最近的质心 → 该质心对应档位（低价/标配/高配）
+  let bi=0,bd=Infinity;
+  for(let i=0;i<3;i++){ const d=Math.abs(sc-cs[i]); if(d<bd){bd=d;bi=i;} }
+  return {label:['低价','标配','高配'][bi], cls:['lo','md','hi'][bi]};
 }
 // 对标表列筛选值（与显示一致）
 function f5Fval(k, m) {
@@ -2095,7 +2123,7 @@ function f5Fval(k, m) {
   if (k==='anti') return (m.anti||m.anti_band)||'待补';
   if (k==='mem') return memFmt(m.mem).replace(/<[^>]+>/g,'');
   if (k==='audio') return m.audio || '待补';
-  if (k==='score') return f5NoScore(m) ? '待补' : f5TierOf(f5Score(m), F5._tiers||{hi:Infinity,lo:-Infinity}).label;
+  if (k==='score') return f5NoScore(m) ? '待补' : f5TierOf(f5Score(m), F5._tiers||{has:false,kmeans:[]}).label;
   return m[k]!=null? String(m[k]) : '待补';
 }
 // 品牌+型号：小米/红米/雷鸟/Vidda 显示「品牌+产品名」，其余「品牌+型号」
@@ -2323,7 +2351,7 @@ function f5Draw() {
       if (c2.k==='trend') return `<td>${f5Spark(m)}</td>`;
       if (c2.k==='avg_price') return `<td>¥${m.avg_price}</td>`;
       if (c2.k==='score') { if(f5NoScore(m)) return `<td><span class="na">待补</span></td>`; const sc=f5Score(m); const tg=f5TierOf(sc,tiers); return `<td><span class="f5tier ${tg.cls}" title="配置分 ${sc}/100">${tg.label}</span></td>`; }
-      if (c2.k==='part') return `<td>${m.part!=null && m.part!=='' ? m.part : '<span class="na">待补</span>'}</td>`;
+      if (c2.k==='part') { const pv = m.part!=null && m.part!=='' ? m.part : (m.part_band ? (m.part_band==='无分区' ? '无分区' : m.part_band) : ''); return `<td>${pv ? pv : '<span class="na">待补</span>'}</td>`; }
       if (c2.k==='refresh') return `<td>${f5Hz(m.refresh_hz)}</td>`;
       if (c2.k==='mem') return `<td>${memFmt(m.mem)}</td>`;
       if (c2.k==='tech') return `<td>${f5Tech(m)}</td>`;
@@ -2338,6 +2366,7 @@ function f5Draw() {
   });
   h += `</tbody>`;
   tbl.innerHTML = h;
+  buildFloatHeads();   // 对标表表头吸顶（复用四图浮动表头机制）
   const dlBtn = document.getElementById('f5dlBtn');
   if (dlBtn) dlBtn.onclick = () => exportF5Csv(list);
   f5Deep(list, locLb);
@@ -2587,7 +2616,7 @@ def build_html():
           <span>内存10：≤2GB 6 / 3GB 8 / 4GB+ 10</span>
           <span>抗反射10：无0 / AG 4 / LR+AG 8 / LR 10</span>
           <span>音响10：2.0声道0 / 2.1=4 / 2.1.2=6 / 更高=8 / 更高且名品(安桥·帝瓦雷·哈曼…)10</span>
-          <span>档位口径＝同片配置分前1/3=高配、后1/3=低价、其余=标配</span>
+          <span>档位口径＝该格子内配置分经 K-Means 聚 3 簇，按最接近簇判定高配/标配/低价</span>
         </div>
       </div>
     </div>
