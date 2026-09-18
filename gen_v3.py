@@ -2323,16 +2323,31 @@ function f5Draw() {
   });
   if (F5.sort) {
     const sk = F5.sort;
+    if (sk==='score') {
+      // 配置档列排序：主按分值（升/降依表头），平分按销量降序
+      rows.sort((a,b) => {
+        const xs=f5Score(a), ys=f5Score(b);
+        if (xs!==ys) return (F5.asc?1:-1)*(xs<ys?-1:1);
+        return (b.cum_vol??0)-(a.cum_vol??0);
+      });
+    } else {
+      rows.sort((a,b) => {
+        let x,y;
+        if (sk==='brand') { x=a.brand; y=b.brand; }
+        else if (sk==='cum_vol') { x=a.cum_vol??0; y=b.cum_vol??0; }
+        else if (sk==='avg_price') { x=a.avg_price??0; y=b.avg_price??0; }
+        else if (sk==='model') { x=shortName(a); y=shortName(b); }
+        else if (sk==='trend') { x=((a.gro||{}).w8||[]).reduce((s,v)=>s+v,0); y=((b.gro||{}).w8||[]).reduce((s,v)=>s+v,0); }
+        else { x=f5Fval(sk,a); y=f5Fval(sk,b); if (sk==='refresh'||sk==='mem'){x=parseFloat(x)||0;y=parseFloat(y)||0;} }
+        return (F5.asc ? 1 : -1) * (x<y?-1:x>y?1:0);
+      });
+    }
+  } else if (F5.filter['score'] && F5.filter['score'].size===1) {
+    // 仅筛选单一配置档：按分值降序，平分按销量降序
     rows.sort((a,b) => {
-      let x,y;
-      if (sk==='brand') { x=a.brand; y=b.brand; }
-      else if (sk==='cum_vol') { x=a.cum_vol??0; y=b.cum_vol??0; }
-      else if (sk==='avg_price') { x=a.avg_price??0; y=b.avg_price??0; }
-      else if (sk==='model') { x=shortName(a); y=shortName(b); }
-      else if (sk==='trend') { x=((a.gro||{}).w8||[]).reduce((s,v)=>s+v,0); y=((b.gro||{}).w8||[]).reduce((s,v)=>s+v,0); }
-      else if (sk==='score') { x=f5Score(a); y=f5Score(b); }
-      else { x=f5Fval(sk,a); y=f5Fval(sk,b); if (sk==='refresh'||sk==='mem'){x=parseFloat(x)||0;y=parseFloat(y)||0;} }
-      return (F5.asc ? 1 : -1) * (x<y?-1:x>y?1:0);
+      const xs=f5Score(a), ys=f5Score(b);
+      if (xs!==ys) return ys-xs;
+      return (b.cum_vol??0)-(a.cum_vol??0);
     });
   }
   const tiers = f5Tiers(list); F5._tiers = tiers;
