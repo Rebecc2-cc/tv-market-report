@@ -1552,7 +1552,7 @@ function exportF5Csv(list) {
       '屏幕技术': f5TechPlain(m),
       '近8周销量(26W30-37)': w,
       '原生刷新率Hz': m.refresh_hz != null && String(m.refresh_hz).trim()!=='' ? String(m.refresh_hz).replace(/Hz$/i,'') + 'Hz' : '待补',
-      '控光分区': m.part != null && m.part!=='' ? m.part : (m.part_band ? (m.part_band==='无分区' ? '无分区' : m.part_band) : '待补'),
+      '控光分区': m.part != null && m.part!=='' ? m.part : (m.part_band ? (m.part_band==='无分区' ? '无' : m.part_band) : '待补'),
       '内存': f5MemPlain(m.mem),
       '抗反射': (m.anti||m.anti_band) || '待补',
       '音响': m.audio || '待补',
@@ -2378,7 +2378,7 @@ function f5Draw() {
       if (c2.k==='trend') return `<td>${f5Spark(m)}</td>`;
       if (c2.k==='avg_price') return `<td>¥${m.avg_price}</td>`;
       if (c2.k==='score') { if(f5NoScore(m)) return `<td><span class="na">待补</span></td>`; const sc=f5Score(m); const tg=f5TierOf(sc,tiers); return `<td><span class="f5tier ${tg.cls}" title="配置分 ${sc}/100">${tg.label} ${sc}</span></td>`; }
-      if (c2.k==='part') { const pv = m.part!=null && m.part!=='' ? m.part : (m.part_band ? (m.part_band==='无分区' ? '无分区' : m.part_band) : ''); return `<td>${pv ? pv : '<span class="na">待补</span>'}</td>`; }
+      if (c2.k==='part') { const pv = m.part!=null && m.part!=='' ? m.part : (m.part_band ? (m.part_band==='无分区' ? '无' : m.part_band) : ''); return `<td>${pv ? pv : '<span class="na">待补</span>'}</td>`; }
       if (c2.k==='refresh') return `<td>${f5Hz(m.refresh_hz)}</td>`;
       if (c2.k==='mem') return `<td>${memFmt(m.mem)}</td>`;
       if (c2.k==='tech') return `<td>${f5Tech(m)}</td>`;
