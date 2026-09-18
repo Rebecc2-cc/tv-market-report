@@ -2052,7 +2052,19 @@ function f5PartScore(p){ if(p==null||String(p).includes('无')) return 0;
   return {'几十区':7,'百级':13,'几百':15,'千级':17,'百千级':19,'2000级':21,'3000级':22,'3000级+':25}[String(p)]||0;
 }
 function f5HzScore(h){ if(!h) return 0; return h>=150?10:(h>=120?8:6); }   // 150以上=10，120-144=8，60=6
-function f5MemScore(b){ return {'≤2GB':6,'3GB':8,'4GB+':10}[String(b)]||0; }
+function f5MemScore(m){
+  const s = String(m.mem||'').trim();
+  const g = s.match(/(?:^|\D)(\d+(?:\.\d+)?)\s*\+\s*(\d+)/);
+  if (g) {
+    const ram = parseFloat(g[1]), rom = +g[2];
+    const base = ram < 3 ? 6 : (ram < 4 ? 7 : 8);  // ≤2GB=6 / 3GB=7 / 4GB+=8
+    const add = rom >= 128 ? 2 : (rom >= 64 ? 1 : 0);
+    return Math.min(10, base + add);               // 存储参与：2+32=6 / 2+64=7 / 4+128=10
+  }
+  const b = String(m.mem_band || '');
+  if (b === '≤2GB') return 6; if (b === '3GB') return 7; if (b === '4GB+') return 8;
+  return 0;
+}
 function f5AntiScore(a){ const s=String(a||''); if(!s||s.includes('无')) return 0;
   if(s.includes('+AG')) return 8;   // LR+AG
   if(s.includes('AG')) return 4;
@@ -2072,7 +2084,7 @@ function f5AudioScore(a){ const s=String(a||''); if(!s||s.includes('免')||s.inc
 }
 function f5Score(m){ return Math.round(
   f5TechScore(m.tech)+f5PartScore(m.part_band)+f5HzScore(m.refresh_hz)+
-  f5MemScore(m.mem_band)+f5AntiScore(m.anti)+f5AudioScore(m.audio)); }
+  f5MemScore(m)+f5AntiScore(m.anti)+f5AudioScore(m.audio)); }
 // 格子内按配置分 K-Means 聚 3 簇 → 高配/标配/低价（自然分簇，非均等分位；分簇不明显时按分差就近纳入）
 const F5_SCORE_KEYS = ['tech','part_band','refresh_hz','mem_band','anti','audio'];
 function f5ParamMissing(m){ return F5_SCORE_KEYS.some(k => { const v=m[k]; return v==null || String(v).trim()==='' || v==='待补'; }); }
@@ -2608,12 +2620,12 @@ def build_html():
       <div class="f5ddown" id="f5ddown"></div>
       <div class="scroll"><table class="f5tbl" id="f5tbl"></table></div>
       <div class="f5score">
-        <b>配置评分规则</b>（总分100 = 屏幕技术40 + 分区20 + 刷新率10 + 内存10 + 抗反射10 + 音响10）
+        <b>配置评分规则</b>（总分100 = 屏幕技术35 + 分区25 + 刷新率10 + 内存10 + 抗反射10 + 音响10）
         <div>
-          <span>技术40：OLED 40 / RGB-MiniLED 34 / SQD-Mini 30 / QD-Mini 26 / MiniLED 22 / QLED·量子点 18 / LED 14</span>
-          <span>分区20：无0 → 几十6 → 百级10 → 几百12 → 千级14 → 百千级16 → 两千级17 → 三千级18 → 3000级+ 20</span>
+          <span>技术35：OLED 35 / RGB-MiniLED 30 / SQD-Mini 26 / QD-Mini 23 / MiniLED 19 / QLED·量子点 16 / LED 12</span>
+          <span>分区25：无0 → 几十7 → 百级13 → 几百15 → 千级17 → 百千级19 → 两千级21 → 三千级22 → 3000级+ 25</span>
           <span>刷新率10：60Hz 6 / 120–144Hz 8 / 150Hz+ 10</span>
-          <span>内存10：≤2GB 6 / 3GB 8 / 4GB+ 10</span>
+          <span>内存10：RAM≤2GB 起6 / 3GB 起7 / 4GB+ 起8 ＋ ROM≤32GB +0 / 64GB +1 / 128GB +2（封顶10）</span>
           <span>抗反射10：无0 / AG 4 / LR+AG 8 / LR 10</span>
           <span>音响10：2.0声道0 / 2.1=4 / 2.1.2=6 / 更高=8 / 更高且名品(安桥·帝瓦雷·哈曼…)10</span>
           <span>档位口径＝该格子内配置分经 K-Means 聚 3 簇，按最接近簇判定高配/标配/低价</span>
