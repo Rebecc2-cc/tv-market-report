@@ -1720,11 +1720,13 @@ function buildMisc() {
     if (!S.cmp) { S.sel = []; renderCmpBar(); }
     renderAll();
   };
-  // 型号加入对比：文档级事件委托，任意时刻生成的 .mc 型号卡都能点击加入对比
-  // （对比模式下可自由展开格子 → 展开出的型号卡也走此委托、无需逐次重绑）
+  // 型号加入对比：文档级事件委托，任意时刻生成的型号元素(.mc 卡片 / .m-row / 图5对标表行) 都能点击加入对比
+  // （对比模式下可自由展开格子 → 展开出的型号卡也走此委托、无需逐次重绑；图5对标表行单击选中、双击仍保留原有入口）
   document.addEventListener('click', function(cmpSel){
-    const c = cmpSel.target && cmpSel.target.closest ? cmpSel.target.closest('.mc') : null;
-    if (!c || !S.cmp) return;
+    if (!S.cmp) return;
+    const t = cmpSel.target;
+    const c = t && t.closest ? t.closest('.mc, .m-row, tr[data-id]') : null;
+    if (!c || c.closest('th')) return;      // 跳过表头（排序/列筛选）
     const id = +c.dataset.id;
     const i = S.sel.indexOf(id);
     if (i >= 0) S.sel.splice(i,1);
@@ -2431,7 +2433,7 @@ function f5Draw() {
   if (!rows.length) h += `<tr><td colspan="${cols.length}" class="na" style="text-align:center;padding:16px">无在售热门型号 —— 空档位置</td></tr>`;
   else rows.forEach(m => {
     const c = CO[m.brand]||'#0E7CE8';
-    h += `<tr>${cols.map(c2=>{
+    h += `<tr data-id="${m.id}">${cols.map(c2=>{
       if (c2.k==='brand') return `<td style="border-left:3px solid ${c}">${m.brand}</td>`;
       if (c2.k==='size') return `<td>${m.size}吋</td>`;
       if (c2.k==='cum_vol') return `<td>${fmtN(m.cum_vol)}</td>`;
