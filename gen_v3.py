@@ -2099,7 +2099,7 @@ function f5PartScore(m){
     if (raw>=1500) return 18;
     if (raw>=1000) return 16;
     if (raw>=700) return 12;
-    if (raw>=400) return 10;
+    if (raw>=500) return 10;
     if (raw>=200) return 7;
     if (raw>=100) return 5;
     if (raw>=1) return 3;
@@ -2109,7 +2109,7 @@ function f5PartScore(m){
   if (b.includes('无')) return 0;
   return {'几十区':3,'百级':5,'几百':11,'千级':16,'百千级':16,'2000级':19,'三千级':20,'四千-七千级':22,'八千级+':25}[b]||0;
 }
-function f5HzScore(h){ if(!h) return 0; if(h>=180) return 10; if(h>=170) return 9; if(h>=165) return 8; if(h>=150) return 7; if(h>=132) return 6; if(h>=120) return 4; return 0; }   // 60Hz=0 / 120=4 / 132-144=6 / 150=7 / 165=8 / 170=9 / 180=10
+function f5HzScore(h){ if(!h) return 0; if(h>=180) return 10; if(h>=170) return 9; if(h>=165) return 8; if(h>=150) return 7; if(h>=144) return 6; if(h>=120) return 4; return 0; }   // 60Hz=0 / 120-132=4 / 144=6 / 150=7 / 165=8 / 170=9 / 180=10
 function f5MemScore(m){
   const s = String(m.mem||'').trim();
   const g = s.match(/(?:^|\D)(\d+(?:\.\d+)?)\s*\+\s*(\d+)/);
