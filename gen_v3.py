@@ -1452,7 +1452,6 @@ function renderAll() {
 function bindCells() {
   document.querySelectorAll('.cell[data-series]').forEach(el => {
     el.onclick = () => {
-      if (S.cmp) return;
       const k = el.dataset.brand+'|'+el.dataset.series+'|'+el.dataset.col;
       if (S.open[k]) { delete S.open[k]; } else { S.open[k] = 1; }
       drawExp();
@@ -1460,23 +1459,13 @@ function bindCells() {
   });
   document.querySelectorAll('.cell[data-belt]').forEach(el => {
     el.onclick = () => {
-      if (S.cmp) return;
       const k = 'B|'+el.dataset.belt+'|'+el.dataset.size;
       if (S.open[k]) { delete S.open[k]; } else { S.open[k] = 1; }
       drawExp();
     };
   });
-  document.querySelectorAll('.mc').forEach(el => {
-    el.onclick = e => {
-      e.stopPropagation();
-      if (!S.cmp) return;
-      const id = +el.dataset.id;
-      const i = S.sel.indexOf(id);
-      if (i >= 0) S.sel.splice(i,1);
-      else { if (S.sel.length >= 8) { alert('最多对比 8 个型号'); return; } S.sel.push(id); }
-      renderAll(); renderCmpBar();
-    };
-  });
+  // 型号加入对比：由 buildMisc 里的 document 级事件委托统一处理（见委托），
+  // 确保对比模式下新展开格子生成的型号卡也能选中，实现全局型号可对比。
 }
 
 function drawExp() {
@@ -1731,6 +1720,17 @@ function buildMisc() {
     if (!S.cmp) { S.sel = []; renderCmpBar(); }
     renderAll();
   };
+  // 型号加入对比：文档级事件委托，任意时刻生成的 .mc 型号卡都能点击加入对比
+  // （对比模式下可自由展开格子 → 展开出的型号卡也走此委托、无需逐次重绑）
+  document.addEventListener('click', function(cmpSel){
+    const c = cmpSel.target && cmpSel.target.closest ? cmpSel.target.closest('.mc') : null;
+    if (!c || !S.cmp) return;
+    const id = +c.dataset.id;
+    const i = S.sel.indexOf(id);
+    if (i >= 0) S.sel.splice(i,1);
+    else { if (S.sel.length >= 8) { alert('最多对比 8 个型号'); return; } S.sel.push(id); }
+    renderAll(); renderCmpBar();
+  });
   // Esc 关闭对比弹窗
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
