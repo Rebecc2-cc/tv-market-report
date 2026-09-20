@@ -50,8 +50,8 @@ FIG1_LAB = {32: "32吋", 40: "40吋", 43: "43吋", 50: "50吋", 55: "55吋*",
 SIZE_ORDER = ["50吋及以下", "55吋", "65吋", "75吋", "85吋", "98-100吋", "100吋以上"]
 BELT_ORDER = ["<1000", "1000-1999", "2000-2999", "3000-4999", "5000-6999", "7000-7999",
               "8000-8999", "9000-9999", "10000-12999", "13000-15999", "16000-19999", "20000+"]
-# 图3：分区档对齐参考（数据用定性档位：3000级+ → 无分区）；刷新率用具体 Hz 值（保留 132Hz 单独列；含全部 8 档）
-PART_ORDER = ["3000级+", "2000级", "千级", "百千级", "几百", "百级", "几十区", "<100", "无分区"]
+# 图3：分区档对齐参考（高档按分区数细分：三千级／四千-七千级／八千级+）；刷新率用具体 Hz 值（保留 132Hz 单独列；含全部 8 档）
+PART_ORDER = ["八千级+", "四千-七千级", "三千级", "2000级", "千级", "百千级", "几百", "百级", "几十区", "<100", "无分区"]
 # 图4：能效 × 分辨率（对齐参考）
 MEM_ORDER = ["≤2GB", "3GB", "4GB+", "待补"]
 RES_ORDER = ["4K", "1080P", "WXGA", "待补"]
@@ -2049,8 +2049,8 @@ function f5RelCfg(m, cfg) {
     const med = {};
     const ar = k => pool.map(x=>x[k]).filter(v=>v!=null).sort((a,b)=>a-b);
     const partMed = [...pool].map(x=>x.part_band?1:0).reduce((a,b)=>a+b,0)/(pool.length||1);
-    // 分区档位量化为数值（百级=1 千级=2 百千级=2.5 几千=3 2000级=4 3000+=5）
-    const pq = v=>v!=null && !String(v).includes('无') ? {百级:1,几百:1,千级:2,百千级:2.5,几千:3,'2000级':4,'3000级+':5}[String(v)]||1 : 0;
+    // 分区档位量化为数值（百级=1 千级=2 百千级=2.5 2000级=4 三千级=5 四千-七千级=6 八千级+=7）
+    const pq = v=>v!=null && !String(v).includes('无') ? {百级:1,几百:1,千级:2,百千级:2.5,'2000级':4,'三千级':5,'四千-七千级':6,'八千级+':7}[String(v)]||1 : 0;
     const ps = pool.map(x=>pq(x.part_band)).filter(v=>v>0).sort((a,b)=>a-b);
     med.part = ps.length? ps[Math.floor(ps.length/2)] : 0;
     const hs = pool.map(x=>x.refresh_hz||0).filter(v=>v>0).sort((a,b)=>a-b);
@@ -2064,7 +2064,7 @@ function f5RelCfg(m, cfg) {
   }
   const med = f5RelCfg._base.get(key)||{part:0,refresh:0,mem:0,audio:0};
   // 当前型号相对基线高低分：越级=高(1) 平(0) 低(-1) 按多数列
-  const pq = v=>v!=null && !String(v).includes('无') ? {百级:1,几百:1,千级:2,百千级:2.5,几千:3,'2000级':4,'3000级+':5}[String(v)]||1 : 0;
+  const pq = v=>v!=null && !String(v).includes('无') ? {百级:1,几百:1,千级:2,百千级:2.5,'2000级':4,'三千级':5,'四千-七千级':6,'八千级+':7}[String(v)]||1 : 0;
   const aq = v=>{ if(v==null||String(v).includes('免'))return 0; if(String(v).includes('7.1'))return 4; if(String(v).includes('2.1.2'))return 3; if(String(v).includes('2.1'))return 2; if(String(v).includes('2.0'))return 1; return 1; };
   const scores = [
     (pq(m.part_band)||0) - med.part,
@@ -2082,8 +2082,8 @@ function f5RelCfg(m, cfg) {
   else win = rel==='平' ? 'win' : (rel==='高'?'loss':'tie');
   return { rel, win };
 }
-// 分区档位显示名：2000级→两千级，3000级+→三千级+（数据仍为英文符号，仅展示改名）
-function partLabel(p) { return ({'2000级':'两千级','3000级+':'三千级+'})[p] || p; }
+// 分区档位显示名：2000级→两千级；三千级/四千-七千级/八千级+ 直接展示
+function partLabel(p) { return ({'2000级':'两千级'})[p] || p; }
 // 图5 配置评分（技术35 / 分区25 / 刷新10 / 内存10 / 抗反射10 / 音响10 = 100）=====
 const _AUD_BR = ['安桥','帝瓦雷','哈曼','JBL','B&W','Bose','雅马哈','索尼'];
 function f5TechScore(t){ const n=f5TechNorm(t); if(!n) return 0;
@@ -2107,7 +2107,7 @@ function f5PartScore(m){
   }
   const b = String((m && m.part_band) || '');
   if (b.includes('无')) return 0;
-  return {'几十区':3,'百级':5,'几百':11,'千级':16,'百千级':16,'2000级':19,'3000级+':20,'几千':22}[b]||0;
+  return {'几十区':3,'百级':5,'几百':11,'千级':16,'百千级':16,'2000级':19,'三千级':20,'四千-七千级':22,'八千级+':25}[b]||0;
 }
 function f5HzScore(h){ if(!h) return 0; if(h>=180) return 10; if(h>=170) return 9; if(h>=165) return 8; if(h>=150) return 7; if(h>=132) return 6; if(h>=120) return 4; return 0; }   // 60Hz=0 / 120=4 / 132-144=6 / 150=7 / 165=8 / 170=9 / 180=10
 function f5MemScore(m){
@@ -2249,7 +2249,7 @@ function f5Deep(list, locLb){
   H.push('</div>');
 
   // 分区桶显示转换
-  function pb(v){ return v==null?'待补':(String(v).includes('2000级')?'两千级':String(v).includes('3000级+')?'三千级+':v); }
+  function pb(v){ return v==null?'待补':(String(v).includes('2000级')?'两千级':v); }
   H.push(`<div class="dsec"><div class="dt">⑤ 配置错开机会与建议</div>`);
   const adv = f5Advice(list);
   H.push(adv.length ? adv.map(a=>`<div class="gm adv">${a}</div>`).join('') : '<div class="gm">格内配置已较同质，错开空间有限，主要靠价位/渠道竞争。</div>');
@@ -2639,7 +2639,7 @@ def build_html():
     <span class="lg"><i style="background:#81d4fa;border:1px solid #dde2e8"></i>4GB+</span>
     <span class="lg"><i style="background:#f6f7f9;border:1px dashed #c9cfd8"></i>待补</span>
   </div>
-  <div class="note">行 = 控光分区档（<b>3000级+ → 无分区</b>），列 = <b>刷新率</b>（120Hz 与 132Hz 合并为 120-132Hz；165Hz 与 170Hz 合并为 165-170Hz；余 60／144／150／180Hz）。
+  <div class="note">行 = 控光分区档（高档按分区数细分：<b>三千级／四千-七千级／八千级+</b>），列 = <b>刷新率</b>（120Hz 与 132Hz 合并为 120-132Hz；165Hz 与 170Hz 合并为 165-170Hz；余 60／144／150／180Hz）。
     芯片左色条 = 品牌色，芯片底色 = 内存档，徽章 = 抗反射（AG／LR）+ 屏幕技术（Mini LED／QD-MiniLED／SQD-MiniLED／RGB-MiniLED／QLED 等进阶技术显示原名并高亮，普通液晶统一示作 LED）。门槛（近20周）：&gt;50吋 主流&gt;3000台、98吋+&gt;500台（{len(g3)} 款；分区已覆盖 {p_cov} 款、刷新率已覆盖 {hz_cov} 款，其余「待补」占位）。</div>
   <div id="fig3tools" class="ftools"></div>
   <div class="scroll" id="fig3body"></div>
