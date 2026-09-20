@@ -2176,8 +2176,13 @@ function f5KMeans(vals,k){
 // 在当前格子的所有可评分型号里，对配置分做 3 簇，返回三簇质心（升序）
 function f5Tiers(listm){ 
   const base = (listm||[]).filter(m=>!f5NoScore(m));
-  if(!base||base.length<3) return {has:false, kmeans:[]};
+  if(!base||base.length<1) return {has:false, kmeans:[]};
   const ss=base.map(m=>f5Score(m)).filter(v=>!isNaN(v));
+  if(!ss.length) return {has:false, kmeans:[]};
+  // 样本不足3个或全同分：无法自然聚3簇 → 按 低价/标配/高配 直接定边界
+  const sorted=[...ss].sort((a,b)=>a-b);
+  if(new Set(ss).size<=1){ const v=sorted[0]; return {has:true, kmeans:[v-1, v, v+1]}; } // 全员同分→统一为「标配」(质心居中)
+  if(ss.length<3){ const lo=sorted[0], hi=sorted[sorted.length-1]; return {has:true, kmeans:[lo, (lo+hi)/2, hi]}; } // 2个不同分→低配低价、高配高价
   const cs=f5KMeans(ss,3).sort((a,b)=>a-b);
   if(cs.length!==3) return {has:false, kmeans:[]};
   return {has:true, kmeans:cs};
