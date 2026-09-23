@@ -85,7 +85,7 @@ def _read_meta():
             return json.loads(p.stdout)
     except Exception:
         pass
-    return {"week_end": 37, "week_start": 18, "fig1_window": "近20周(26W18-W37)", "fig1_gate": {"main": 1000, "big98": 200}}
+    return {"week_end": 38, "week_start": 19, "fig1_window": "近20周(26W19-W38)", "fig1_gate": {"main": 1000, "big98": 200}}
 META = _read_meta()
 
 models = json.load(open(SRC, encoding="utf-8"))
@@ -678,7 +678,7 @@ function filtered() { return M.filter(pass); }
 function zeroSales9(m) { const w=(m.gro||{}).w8||[]; return w.length && w.every(v=>!v); }
 
 /* ============ 新品（近4周滚动窗口首次出现） ============ */
-/* 当前近4周窗口：META.week_end 为末周(n)，起点 = n-3。例：期末37 → 新品=首现于26W34~37 */
+/* 当前近4周窗口：META.week_end 为末周(n)，起点 = n-3。例：期末38 → 新品=首现于26W35~38 */
 const _newEnd = D.meta && D.meta.week_end || 37;
 const _newEndNum = 202600 + (+_newEnd);
 const _newStartNum = _newEndNum - 3;
@@ -687,7 +687,7 @@ function isNew(m){
   const fn = (m.gro||{}).first_num;
   return fn!=null && fn>=_newStartNum && fn<=_newEndNum;
 }
-/* 新品近4周累计销量（w8 为 26W30-37，近4周 = 后4个元素） */
+/* 新品近4周累计销量（w8 为 26W31-38，近4周 = 后4个元素） */
 function new4w(m){ const w=(m.gro||{}).w8||[]; return w.slice(-4).reduce((a,b)=>a+(b||0),0); }
 /* 新品准入门槛（图1-4、图5共用）：常规 近4周累计>50；98吋+ 不再豁免，需 近4周累计>10 */
 function newGate(m){ const s=m.size||0; if(s>=93) return new4w(m)>10; return new4w(m)>50; }
@@ -1574,7 +1574,7 @@ function f5MemPlain(mem) {
 function exportF5Csv(list) {
   if (!list.length) { alert('当前选中格子内没有可导出的型号'); return; }
   const ts = F5._tiers || {has:false, kmeans:[]};
-  const cols = ['品牌','型号/产品名','尺寸吋','累计销量','均价','配置分','配置档','屏幕技术',`近8周销量(26W30-37)`,'原生刷新率Hz','控光分区','内存','抗反射','音响'];
+  const cols = ['品牌','型号/产品名','尺寸吋','累计销量','均价','配置分','配置档','屏幕技术',`近8周销量(26W31-38)`,'原生刷新率Hz','控光分区','内存','抗反射','音响'];
   const val = (m, k) => {
     const w = ((m.gro||{}).w8||[]).reduce((s,v)=>s+v,0);
     const hits = {
@@ -1586,7 +1586,7 @@ function exportF5Csv(list) {
       '配置分': f5NoScore(m) ? '待补' : f5Score(m) + '/100',
       '配置档': f5NoScore(m) ? '待补' : f5TierOf(f5Score(m), ts).label,
       '屏幕技术': f5TechPlain(m),
-      '近8周销量(26W30-37)': w,
+      '近8周销量(26W31-38)': w,
       '原生刷新率Hz': m.refresh_hz != null && String(m.refresh_hz).trim()!=='' ? String(m.refresh_hz).replace(/Hz$/i,'') + 'Hz' : '待补',
       '控光分区': m.part != null && m.part!=='' ? m.part : (m.part_band ? (m.part_band==='无分区' ? '无' : m.part_band) : '待补'),
       '内存': f5MemPlain(m.mem),
@@ -1861,7 +1861,7 @@ const F5PR_OF = m => {
 };
 // 图5 门槛：仅保留 >50 吋；近20周 98吋+(≥98) >200 台，其他 >1000 台。新品豁免此门槛（用统一新品门槛）
 const F5_GT = m => { const s = m.size||0, v20 = m.vol20||0; return s >= 98 ? (v20 > 200) : (v20 > 1000); };
-// 近8周0销量排除（持续生效）：近8周 w8 (26W30-37) 全部为 0 的型号从图5移除（新品豁免，改用近4周在售判断）
+// 近8周0销量排除（持续生效）：近8周 w8 (26W31-38) 全部为 0 的型号从图5移除（新品豁免，改用近4周在售判断）
 const f5ZeroSales = m => { const w=(m.gro||{}).w8||[]; return w.length && w.every(v=>!v); };
 const F5POOL = M.filter(m => (m.size||0) > 50 && (F5_GT(m) || (isNew(m)&&newGate(m)) || f5Guard(m)) && F5PR_OF(m) && (!f5ZeroSales(m) || (isNew(m)&&newActive(m)) || f5Guard(m)));   // 图5 型号池：均价无法归档或近8周0销量不入池；新品与保护期豁免门槛与0销量
 const F5 = {
@@ -1989,7 +1989,7 @@ function f5Grid() {
   const buckets = f5Buckets();
   const map = buckets.map;
   const F5VIS = F5POOL.filter(m => isClearShow(5, m) && searchHit(m));
-  // 格的销量 + 近8周趋势（格内机型逐周销量汇总，26W30-37）
+  // 格的销量 + 近8周趋势（格内机型逐周销量汇总，26W31-38）
   const volM = new Map(), fM = new Map(), lM = new Map();
   F5VIS.forEach(m => { if (!F5.b.has(m.brand)) return;
     const k = F5SZ_OF(m)+'||'+F5PR_OF(m);
@@ -1997,8 +1997,8 @@ function f5Grid() {
     volM.set(k,(volM.get(k)||0)+m.cum_vol);
     const w8 = (m.gro||{}).w8 || [];
     if (w8.length) {
-      const f = w8.slice(0,4).filter(v=>v>0).reduce((s,x)=>{s+=x;return s},0); // 26W30-33
-      const l = w8.slice(4).filter(v=>v>0).reduce((s,x)=>{s+=x;return s},0);   // 26W34-37
+      const f = w8.slice(0,4).filter(v=>v>0).reduce((s,x)=>{s+=x;return s},0); // 26W31-34
+      const l = w8.slice(4).filter(v=>v>0).reduce((s,x)=>{s+=x;return s},0);   // 26W35-38
       fM.set(k,(fM.get(k)||0)+f);
       lM.set(k,(lM.get(k)||0)+l);
     }
@@ -2250,7 +2250,7 @@ function f5Deep(list, locLb){
     const w=(m.gro||{}).w8||[]; const fW=w.slice(0,4).reduce((a,b)=>a+(b||0),0), lW=w.slice(4).reduce((a,b)=>a+(b||0),0);
     if(!(fW>0 && lW>0 && (lW-fW)/fW>=0.20)) return null;
     return {m, r:(lW-fW)/fW}; }).filter(Boolean).sort((a,b)=>b.r-a.r).slice(0,6);
-  H.push(`<div class="dsec"><div class="dt">③ 近8周增长表现（W34-37 vs W30-33 ≥20%）</div>`);
+  H.push(`<div class="dsec"><div class="dt">③ 近8周增长表现（W35-38 vs W31-34 ≥20%）</div>`);
   if (!grows.length) H.push(`<div class="gm">该格近8周无增长型号，切入更偏防守。</div>`);
   else H.push('<div class="gm">'+grows.map(g=>`<span class="gchip">${f5pmLabel(g.m)}<b>↑${f5pct(g.r)}</b></span>`).join('')+'</div>');
   H.push('</div>');
@@ -2291,13 +2291,13 @@ function fmtN(x) {
   if (x==null) return '<span class="na">待补</span>';
   return Number(x).toLocaleString('en-US');
 }
-// 近8周微型柱状图：m.gro.w8 (26W30-37)，柱高按片内最大销量归一
+// 近8周微型柱状图：m.gro.w8 (26W31-38)，柱高按片内最大销量归一
 const _w8max = (() => { let mx = 1; F5POOL.forEach(m => { const w=(m.gro||{}).w8||[]; w.forEach(v=>{ if(v>mx) mx=v; }); }); return mx; })();
 // 高价位例外档：55吋≥5000 / 65吋≥6000 / 75吋≥7000 / 85吋≥9000 / 98吋+≥16000（按均价）
 function f5Excp(m){ const s=m.size||0, p=m.avg_price||0; const z=F5SZ_OF(m);
   if(z==='55') return p>=5000; if(z==='65') return p>=6000; if(z==='75') return p>=7000;
   if(z==='85') return p>=9000; return p>=16000; }
-// 清库判定（近8周 w8=26W30-37）：合计 <阈值 或 连续≥4周单周 <阈值；例外档阈值10，普通100
+// 清库判定（近8周 w8=26W31-38）：合计 <阈值 或 连续≥4周单周 <阈值；例外档阈值10，普通100
 function f5Clear(m){
   const w=(m.gro||{}).w8||[]; if(!w.length) return null;
   if(protEx(m)) return null;   // 新品+保护期豁免清库打标
@@ -2340,7 +2340,7 @@ function f5Draw() {
   const list = F5POOL.filter(m => F5.b.has(m.brand) && F5.cells.has(F5SZ_OF(m)+'||'+F5PR_OF(m)) && isClearShow(5, m));
   const n = list.length;
   const vol = list.reduce((s,m)=>s+m.cum_vol,0);
-  // 近8周趋势：格内机型逐周销量汇总 26W30-37，后4周(34-37)相对前4周(30-33)
+  // 近8周趋势：格内机型逐周销量汇总 26W31-38，后4周(35-38)相对前4周(31-34)
   const t8 = [0,0,0,0,0,0,0,0];
   list.forEach(m => { const w=(m.gro||{}).w8||[]; w.forEach((v,i)=>{ t8[i]+=(v||0); }); });
   const fW = t8.slice(0,4).reduce((a,b)=>a+b,0), lW = t8.slice(4).reduce((a,b)=>a+b,0);
@@ -2547,7 +2547,7 @@ def build_html():
     n = len(models)
     spec_n = sum(1 for m in models if m.get("spec_src") == "ref")
     ser_n = len({m["series"] for m in models})
-    # 图1 布局口径：近20周(26W18-W37) 主流(尺寸<98)>1000 / 98吋+(≥98)>200 台 且 尺寸能落进图1 的 9 个尺寸列
+    # 图1 布局口径：近20周(26W19-W38) 主流(尺寸<98)>1000 / 98吋+(≥98)>200 台 且 尺寸能落进图1 的 9 个尺寸列
     g1 = [m for m in models if m.get("fig1_ok")]
     n1 = len(g1)
     ser1_n = len({m["series"] for m in g1})
@@ -2615,7 +2615,7 @@ def build_html():
   <h2>图1　系列 × 尺寸 销量分布</h2>
   <div class="fig-brand" id="fig1brand"></div>
   <div class="note">9 个尺寸（<b>60吋并入 55、100吋+ 并入 98吋+</b>）
-    入选门槛 <b>近20周(26W18–W37) 主流&gt;1000 / 98吋+&gt;200 台</b>　底色深浅 = 该格销量强度，入选 {n1} 款 / {ser1_n} 系列。</div>
+    入选门槛 <b>近20周(26W19–W38) 主流&gt;1000 / 98吋+&gt;200 台</b>　底色深浅 = 该格销量强度，入选 {n1} 款 / {ser1_n} 系列。</div>
   <div class="scroll" id="fig1body"></div>
   <div class="legend">
     <span class="lg"><span class="heat-scale"><span class="hs-bar"></span>浅 → 深 = 单格销量强度（0 → 峰值）</span></span>
@@ -2669,7 +2669,7 @@ def build_html():
   <h2>图5　产品定位分析</h2>
   <div class="fig-brand" id="fig5brand"></div>
   <div class="note">以「尺寸 × 价位段」为竞争地图，定位<b>你的某一款产品</b>落点（仅分析 <b>&gt;50 吋</b>大屏市场），看它吃哪种市场机会（<b>扎堆卷 / 看增长 / 找空白</b>）再下钻对标。
-    格色 = 该位置拥挤度（过门槛型号数，自动分桶），蓝标 = 该格近8周销量上升（后4周 vs 前4周增长≥20%），红/深色格 = 已选中的目标落点（<b>点击可多选，再点取消</b>）。门槛（近20周）：<b>98吋+ &gt;200 台、其他尺寸 &gt;1000 台</b>。趋势口径：AVC 26W30–37 逐周销量。</div>
+    格色 = 该位置拥挤度（过门槛型号数，自动分桶），蓝标 = 该格近8周销量上升（后4周 vs 前4周增长≥20%），红/深色格 = 已选中的目标落点（<b>点击可多选，再点取消</b>）。门槛（近20周）：<b>98吋+ &gt;200 台、其他尺寸 &gt;1000 台</b>。趋势口径：AVC 26W31–38 逐周销量。</div>
   <div class="f5wrap">
     <div class="f5left">
       <div class="f5card">
