@@ -559,7 +559,7 @@ th .f5fbtn.act{background:#0E7CE8;color:#fff;border-color:#0E7CE8}
 .f5score{margin-top:12px;padding:10px 12px;background:#f8fafc;border:1px solid #e6e9f0;border-radius:8px;font-size:10.5px;color:#475569;line-height:1.9}
 .f5score b{color:#1e293b;margin-right:6px}
 .f5score>div{display:flex;flex-wrap:wrap;gap:2px 18px;margin-top:2px}
-.f5score span{white-space:nowrap}
+.f5score span{white-space:normal;overflow-wrap:anywhere}
 .f5deep{margin-top:0;border:1px solid #e6e9f0;border-radius:10px;overflow-x:auto;overflow-y:hidden;font-size:11.5px;color:#334155}
 .f5deep .dhead{background:#f1f5f9;padding:8px 12px;font-weight:700;color:#1e293b;font-size:12.5px;border-bottom:1px solid #e2e8f0}
 .f5deep .dsec{padding:9px 12px;border-top:1px solid #eef0f5}
