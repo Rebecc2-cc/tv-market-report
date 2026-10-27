@@ -456,7 +456,7 @@ th .f5fbtn.act{background:#0E7CE8;color:#fff;border-color:#0E7CE8}
 <div class="wrap">
 
 <header>
-  <h1>8品牌电视定位布局报告 <span class="gentime">更新时间：2026-10-27 11:34</span></h1>
+  <h1>8品牌电视定位布局报告 <span class="gentime">更新时间：2026-10-27 11:41</span></h1>
   <div class="sub">
     <span id="hdSub1">图1 布局口径：<b>AVC 近20周(26W23-W42) 主流&gt;1000 / 98吋+&gt;200 台</b>（395 款 · 51 个系列）</span>　
     销量口径：<b>AVC 26W01–26W42 累计</b>（全量 1387 款 · 累计 741.6 万台）　
@@ -1087,13 +1087,13 @@ function chip(m, showAnti) {
   const memNa = memB === '待补' ? ' memna' : '';
   // hover 文本：首行 = 品牌/型号/尺寸 + AVC 累计销量/均价；第二段 = 仅参数值（无字段名）
   const hp = hoverParams(m);
-  const hover = `${m.brand} ${m.model} ${m.size}吋｜${isProduct?'产品名：'+m.product_name+' ｜':''}${volLabel()} ${fmt(dispVol(m))} 台｜均价 ¥${m.avg_price}` +
+  const hover = `${m.brand} ${m.model} ${m.size}吋｜${isProduct?'产品名：'+m.product_name+' ｜':''}累计 ${fmt(m.cum_vol)} 台｜均价 ¥${m.avg_price}` +
     (hp ? '\n\n' + hp : '');
   return `<div class="mc${memNa} ${S.sel.includes(m.id)?'sel':''}" data-id="${m.id}" title="${hover.replace(/"/g,'&quot;')}">
     <div class="mbar" style="background:${c}"></div>
     <div class="mbody" style="background:${mbg}">
       <div class="mtop"><span class="md" style="background:${c}"></span><span class="mnm">${main}</span>${gDot(m)}${techBadge}${cbsHtml}${clearBadge}${newBadge}</div>
-      <div class="mbot"><span>${m.size}吋</span><span>${fmt(dispVol(m))}台</span>${sv}</div>
+      <div class="mbot"><span>${m.size}吋</span><span>${fmt(m.cum_vol)}台</span>${sv}</div>
     </div></div>`;
 }
 
